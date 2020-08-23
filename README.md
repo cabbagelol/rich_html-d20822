@@ -1,4 +1,4 @@
-![01.png](public/images/01.png)
+![01.png](./public/images/01.png)<!-- @IGNORE PREVIOUS: link -->
 
 # 介绍
 
@@ -123,4 +123,5 @@ Widget build(BuildContext context) {
   );
 }
 ```
-[详情例子](example/lib/main.dart)
+<a href="example/lib/main.dart">详情例子</a>
+
