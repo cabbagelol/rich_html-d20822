@@ -3,4 +3,9 @@
 .packages
 .pub/
 build/
+example/.dart_tool
+example/android/
+example/ios/
+example/build/
+
 flutter_rich_html.iml
