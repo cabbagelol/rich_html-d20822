@@ -29,11 +29,17 @@ class RichHtmlDataImage {
 }
 
 abstract class RichHtmlController {
+  RichHtmlController({this.theme});
+
   String _html;
   RichHtmlUtil _util = RichHtmlUtil();
   RichHtmlTheme theme = RichHtmlTheme();
-
-  RichHtmlController({this.theme});
+  String get text => _util.remStringHtml(this._html);
+  String get html => this._html;
+  TextSelection textSelection;
+  TextEditingController controller = TextEditingController();
+  Function updateWidget;
+  Function clearAll;
 
   set text(String value) {
     this._html = _util.remStringHtml(value);
@@ -42,17 +48,6 @@ abstract class RichHtmlController {
   set html(String value) {
     this._html = value ?? '';
   }
-
-  // text将过滤所有标签(列如<img/>和<video/>)，它仅返回文字内容
-  String get text => _util.remStringHtml(this._html);
-
-  // 所有内容
-  String get html => this._html;
-
-  TextSelection textSelection;
-  TextEditingController controller = TextEditingController();
-  Function updateWidget;
-  Function clearAll;
 
   Future<String> insertImage();
 
