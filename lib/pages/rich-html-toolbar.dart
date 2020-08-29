@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'rich-html.dart';
 import 'rich-html-theme.dart';
 
+enum RichHtmlToolbartype { KEYBOAR, BOX, TEXT, IMAGE, VIDEO, CLEAR }
+
 class RichHtmlToolbar extends StatefulWidget {
   final List<RichHtmlTool> children;
   final RichHtmlController controller;
@@ -11,6 +13,13 @@ class RichHtmlToolbar extends StatefulWidget {
     this.controller, {
     @required this.children,
   });
+
+  @override
+  StatefulElement createElement() {
+    controller.richhtmltoolbarController = children;
+
+    return super.createElement();
+  }
 
   @override
   _RichHtmlToolbarState createState() => _RichHtmlToolbarState();
@@ -28,6 +37,15 @@ class _RichHtmlToolbarState extends State<RichHtmlToolbar> {
       e.controller = widget.controller;
     });
     return Row(children: widget.children);
+  }
+}
+
+abstract class RichHtmlEvents {
+  SpecialText();
+
+  @override
+  String onTap() {
+    this.onTap();
   }
 }
 
@@ -59,6 +77,8 @@ class RichHtmlTool extends StatelessWidget {
 
 /// 文字
 class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
+  RichHtmlToolbartype type = RichHtmlToolbartype.TEXT;
+
   final Widget child;
   final Color color;
   final String tooltip;
@@ -72,7 +92,7 @@ class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
     this.tooltip,
     Function onTap,
     int flex = 0,
-    this.disable,
+    this.disable = false,
   })  : onTap = onTap ?? null,
         flex = flex ?? 0;
 
@@ -83,16 +103,26 @@ class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
         icon: this.child ??
             Icon(
               Icons.text_fields,
-              color: color ?? controller.theme.mainColor,
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).splashColor,
             ),
         tooltip: tooltip ?? '文字',
         onPressed: () async {
-          onTap();
+          onTap?.call(type);
+
           if (disable) {
             return null;
-          } else {
-            return () {};
           }
+
+          if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
+            String text = await this.controller.insertText();
+            controller
+              ..html = controller.html.substring(0, controller.textSelection.baseOffset) +
+                  text +
+                  controller.html.substring(controller.textSelection.baseOffset, controller.html.length);
+
+            controller.updateWidget(controller.html);
+          }
+          return () {};
         },
       ),
       flex: flex,
@@ -108,6 +138,8 @@ class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
 
 /// 图片
 class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
+  RichHtmlToolbartype type = RichHtmlToolbartype.IMAGE;
+
   final Widget child;
   final Color color;
   final String tooltip;
@@ -131,7 +163,7 @@ class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
           IconButton(
             icon: Icon(
               Icons.image,
-              color: color ?? controller.theme.mainColor,
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).splashColor,
             ),
             tooltip: tooltip ?? "插入图片",
             onPressed: () async {
@@ -143,9 +175,9 @@ class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
                   if (path != null) {
                     controller
                       ..html = controller.html.substring(
-                        0,
-                        controller.textSelection.baseOffset,
-                      ) +
+                            0,
+                            controller.textSelection.baseOffset,
+                          ) +
                           '<img src="$path" />' +
                           controller.html.substring(
                             controller.textSelection.baseOffset,
@@ -165,11 +197,15 @@ class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
   }
 
   @override
-  var controller;
+  RichHtmlController controller;
+
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// 多媒体
 class RichHtmlToolVideo extends StatelessWidget implements RichHtmlTool {
+  RichHtmlToolbartype type = RichHtmlToolbartype.VIDEO;
+
   final Widget child;
   final Color color;
   final tooltip;
@@ -213,9 +249,9 @@ class RichHtmlToolVideo extends StatelessWidget implements RichHtmlTool {
             IconButton(
               icon: Icon(
                 Icons.videocam,
-                color: color ?? controller.theme.mainColor,
+                color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
               ),
-              tooltip: tooltip ?? "插入视频",
+              tooltip: tooltip ?? null,
             ), //
       ),
       flex: flex,
@@ -224,61 +260,100 @@ class RichHtmlToolVideo extends StatelessWidget implements RichHtmlTool {
   }
 
   @override
-  var controller;
+  RichHtmlController controller;
+
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// 清理文档内容
 class RichEditToolClear extends StatelessWidget implements RichHtmlTool {
+  RichHtmlToolbartype type = RichHtmlToolbartype.CLEAR;
+
+  final Widget child;
+  final Icons icon;
   final Color disabledColor;
   final Color color;
-  final tooltip;
+  final String tooltip;
   final Function onTap;
-  Future<bool> onClear;
+  final bool onClear;
   final int flex;
   final bool disable;
 
+  double animatedOpacity = 1.0;
+
   RichEditToolClear({
-    this.disabledColor,
+    this.child,
+    this.icon,
+    this.disabledColor = Colors.red,
     this.color,
     this.tooltip,
     Function onTap,
     this.onClear,
     this.flex = 0,
-    this.disable,
-  }) : onTap = onTap ?? null;
+    this.disable = false,
+  })  : onTap = onTap ?? null,
+        assert(
+          child == null && icon == null,
+          'child和icon不应当共存，当chile存有widget，icon会被完全覆盖.',
+        );
 
-  VoidCallback _onClearTap() {
-//    onTap();
-    if (controller.text != null || controller.text.length > 0) {
-      controller.clearAll();
-    }
+  @override
+  StatelessElement createElement() {
+    return super.createElement();
   }
 
   @override
   Widget build(BuildContext context) {
-    Future<bool> onClear () async {
-      return this.onClear;
-    };
+    bool onClear() => this.onClear;
 
     return Row(
       children: [
         RichHtmlTool(
-          child: IconButton(
-            disabledColor: disabledColor ?? Colors.black12,
-            color: color ?? controller.theme.mainColor,
-            icon: Icon(
-              Icons.delete,
-              color: color ?? controller.theme.mainColor,
-            ),
-            onPressed: () async {
-              var _alert = await onClear();
-              print("_alert $_alert");
-              if (_alert) {
-                _onClearTap();
-              }
-            },
-            tooltip: tooltip ?? '清理',
-          ),
+          child: child ??
+              StatefulBuilder(
+                builder: (BuildContext context, StateSetter setState) {
+                  controller.controller.addListener(() {
+                    if (disable || controller.controller.text.length <= 0 || controller.controller.text == null) {
+                      setState(() {
+                        this.animatedOpacity = .3;
+                      });
+                    } else {
+                      setState(() {
+                        this.animatedOpacity = 1.0;
+                      });
+                    }
+                  });
+
+                  onPressed() {
+                    if (disable) {
+                      return null;
+                    }
+
+                    return () {
+                      if (onClear()) {
+                        onTap?.call(type);
+                        if (controller.controller.text != null || controller.controller.text.length > 0) {
+                          controller.clearAll();
+                        }
+                      }
+                    };
+                  }
+
+                  return AnimatedOpacity(
+                    opacity: this.animatedOpacity,
+                    duration: Duration(milliseconds: 300),
+                    child: IconButton(
+                      color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
+                      icon: Icon(
+                        icon ?? Icons.delete,
+                        color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
+                      ),
+                      onPressed: onPressed(),
+                      tooltip: tooltip ?? null,
+                    ),
+                  );
+                },
+              ),
           flex: flex,
           disable: disable,
         ),
@@ -287,55 +362,63 @@ class RichEditToolClear extends StatelessWidget implements RichHtmlTool {
   }
 
   @override
-  var controller;
+  RichHtmlController controller;
 
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// 键盘开关
+/// 操作虚拟键盘
 class RichHtmlToolKeyboardSwitch extends StatelessWidget implements RichHtmlTool, WidgetsBindingObserver {
+  RichHtmlToolbartype type = RichHtmlToolbartype.KEYBOAR;
+
   final BuildContext context;
-  final Color disabledColor;
   final Color color;
-  final tooltip;
+  final String tooltip;
   final int flex;
   final bool disable;
 
-  bool stitc = false;
+  Function upState;
 
   RichHtmlToolKeyboardSwitch(
     this.context, {
-    this.disabledColor,
     this.color,
     this.tooltip,
     this.flex = 0,
-    this.disable,
+    this.disable = false,
   });
 
   _getBtn1ClickListener() {
-    if (!stitc) {
-      return () {
-//        FocusScope.of(context).requestFocus(FocusNode());
-      };
-    } else {
+    if (!(controller.hasFocus ?? false)) {
       return null;
     }
+
+    return () {
+      controller.blur();
+    };
   }
 
   @override
   Widget build(BuildContext contextT) {
-//    stitc = MediaQuery.of(context).viewInsets.bottom == 0;
-
     return RichHtmlTool(
-      child: IconButton(
-        disabledColor: disabledColor ?? Colors.black12,
-        color: color ?? RichHtmlTheme().mainColor,
-        icon: Icon(
-          !stitc ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-          color: color ?? controller.theme.mainColor,
-        ),
-        onPressed: _getBtn1ClickListener(),
-        tooltip: tooltip ?? "键盘",
+      child: StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          upState = () => {setState(() => null)};
+
+          return AnimatedOpacity(
+            opacity: (controller.hasFocus ?? false) ? 1.0 : .3,
+            duration: Duration(microseconds: 300),
+            child: IconButton(
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
+              icon: Icon(
+                (controller.hasFocus ?? false) ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
+              ),
+              onPressed: _getBtn1ClickListener(),
+              tooltip: tooltip ?? null,
+            ),
+          );
+        },
       ),
       flex: flex,
       disable: disable,
@@ -343,13 +426,16 @@ class RichHtmlToolKeyboardSwitch extends StatelessWidget implements RichHtmlTool
   }
 
   @override
-  var controller;
+  RichHtmlController controller;
 
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// SizedBox
+/// 占位
+/// 设计用于占用空间，当然也可以同时填充内容；这类似于SizedBox控件
 class RichHtmlToolSizedBox extends StatelessWidget implements RichHtmlTool {
+  RichHtmlToolbartype type = RichHtmlToolbartype.BOX;
+
   final num width;
   final int flex;
   final Widget child;
@@ -375,7 +461,7 @@ class RichHtmlToolSizedBox extends StatelessWidget implements RichHtmlTool {
   }
 
   @override
-  var controller;
+  RichHtmlController controller;
 
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

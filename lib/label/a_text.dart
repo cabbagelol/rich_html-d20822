@@ -78,11 +78,11 @@ class aText extends SpecialText {
           text: TextSpan(
             text: RichHtmlUtil().remStringHtml(text).trim(),
             style: textStyle?.copyWith(
-              color: Colors.blue.shade500,
+              color: Theme.of(context).primaryColor ?? Colors.blue.shade500,
               fontStyle: FontStyle.normal,
               decoration: TextDecoration.underline,
               decorationStyle: TextDecorationStyle.solid,
-              decorationColor: Colors.blue.shade500,
+              decorationColor: Theme.of(context).primaryColor ?? Colors.blue.shade500,
             ),
           ),
         ),

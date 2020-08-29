@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:extended_text_field/extended_text_field.dart';
+import 'package:flutter_rich_html/main.dart';
 
 import '../label/my_special_text_span_builder.dart';
 import '../pages/rich-html-cursor.dart';
 import '../pages/rich-html-theme.dart';
+import '../pages/rich-html-toolbar.dart';
 import '../label/AsperctRaioImage.dart';
 import '../label/my_extended_text_selection_controls.dart';
 
@@ -33,27 +35,37 @@ abstract class RichHtmlController {
 
   String _html;
   RichHtmlUtil _util = RichHtmlUtil();
-  RichHtmlTheme theme = RichHtmlTheme();
+  RichHtmlTheme theme;
+
   String get text => _util.remStringHtml(this._html);
+
   String get html => this._html;
   TextSelection textSelection;
   TextEditingController controller = TextEditingController();
   Function updateWidget;
   Function clearAll;
+  Function blur;
+  Function focus;
+  bool hasFocus;
+  List<Widget> richhtmltoolbarController;
 
   set text(String value) {
-    this._html = _util.remStringHtml(value);
+    _html = _util.remStringHtml(value);
   }
 
   set html(String value) {
-    this._html = value ?? '';
+    _html = value ?? '';
   }
 
   Future<String> insertImage();
 
   Future<String> insertVideo();
 
-  Widget generateImageView(String url,dynamic img) {
+  Future<String> insertText() async {
+    return '\n输入内容';
+  }
+
+  Widget generateImageView(String url, dynamic img) {
     double width = .0;
     double height = .0;
     bool autoWidth = true;
@@ -161,22 +173,34 @@ class RichHtml extends StatefulWidget {
 }
 
 class _RichHtmlState extends State<RichHtml> {
+  ScrollController _scrollController = ScrollController();
   FocusNode _focusNode = FocusNode();
-  ScrollController _ScrollController = ScrollController();
 
   @override
   void initState() {
     RichHtmlController _rhc = widget.richhtmlController;
+
     _rhc.updateWidget = _onUpdateWidget;
     _rhc.clearAll = _onClear;
+    _rhc.blur = _onBlur;
+    _rhc.focus = _onFocus;
+
     _rhc.controller.text = _rhc._html;
     _rhc.controller.addListener(() {
       _rhc.textSelection = _rhc.controller.selection;
     });
 
-//    _rhc.controller.addListener(() {
-//      print(_rhc.controller.text.substring(_rhc.controller.selection.baseOffset, _rhc.controller.selection.extentOffset));
-//    });
+    _rhc.controller.addListener(() {
+      _rhc.hasFocus = _focusNode.hasFocus;
+      widget.richhtmlController.richhtmltoolbarController.forEach((element) {
+        switch (element.runtimeType) {
+          case RichHtmlToolKeyboardSwitch:
+            RichHtmlToolKeyboardSwitch _e = element;
+            _e.upState();
+            break;
+        }
+      });
+    });
 
     super.initState();
   }
@@ -193,6 +217,20 @@ class _RichHtmlState extends State<RichHtml> {
     return text;
   }
 
+  Function _onBlur() {
+    FocusScopeNode _focusScope = FocusScope.of(super.context);
+    if (_focusScope.hasFocus) {
+      _focusScope.requestFocus(FocusNode());
+    }
+  }
+
+  Function _onFocus() {
+    FocusScopeNode _focusScope = FocusScope.of(super.context);
+    if (!_focusScope.hasFocus) {
+      _focusScope.requestFocus(_focusNode);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -205,14 +243,12 @@ class _RichHtmlState extends State<RichHtml> {
             minLines: 1,
             maxLines: null,
             focusNode: _focusNode,
-
             style: TextStyle(
               fontSize: 16,
             ),
             strutStyle: StrutStyle(
               fontSize: 16,
             ),
-
             specialTextSpanBuilder: MySpecialTextSpanBuilder(
               context,
               widget.richhtmlController.controller,
@@ -220,7 +256,7 @@ class _RichHtmlState extends State<RichHtml> {
               videoView: widget.richhtmlController.generateVideoView,
               imageView: widget.richhtmlController.generateImageView,
             ),
-            scrollController: _ScrollController,
+            scrollController: _scrollController,
             scrollPadding: widget.scrollPadding ?? EdgeInsets.zero,
             scrollPhysics: widget.scrollPhysics ?? ScrollPhysics(),
             textCapitalization: TextCapitalization.words,
