@@ -21,17 +21,12 @@ class RichHtmlTheme {
 class RichHtmlViewTheme {
   /// 背景
   final Color color;
-  final RichHtmlLabelTheme label;
 
   RichHtmlViewTheme({
     this.color = const Color(0xfff2f2f2),
-    this.label,
   });
 }
 
-class RichHtmlLabelTheme {
-
-}
 
 class RichHtmlToolbarTheme {
   /// 背景

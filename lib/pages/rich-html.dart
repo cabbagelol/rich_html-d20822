@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter_rich_html/main.dart';
 
-import '../label/my_special_text_span_builder.dart';
+import '../label/special_textspan_builder.dart';
+import '../label/textselection_controls.dart';
 import '../pages/rich-html-cursor.dart';
 import '../pages/rich-html-theme.dart';
 import '../pages/rich-html-toolbar.dart';
 import '../label/AsperctRaioImage.dart';
-import '../label/my_extended_text_selection_controls.dart';
 
 enum RichHtmlLabelType { IMAGE, VIDEO, P, TEXT, AT, EMOJI, EMAIL, DOLLAR, BLOCKQUOTE, B, LINK }
 
@@ -192,6 +192,7 @@ class _RichHtmlState extends State<RichHtml> {
 
     _rhc.controller.addListener(() {
       _rhc.hasFocus = _focusNode.hasFocus;
+
       widget.richhtmlController.richhtmltoolbarController.forEach((element) {
         switch (element.runtimeType) {
           case RichHtmlToolKeyboardSwitch:
@@ -203,6 +204,11 @@ class _RichHtmlState extends State<RichHtml> {
     });
 
     super.initState();
+  }
+
+  @override
+  dispose() {
+    super.dispose();
   }
 
   Future<bool> _onClear() async {
@@ -235,8 +241,10 @@ class _RichHtmlState extends State<RichHtml> {
   Widget build(BuildContext context) {
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      cacheExtent: 2,
       children: [
-        Padding(
+        Container(
+          color: widget.richhtmlController.theme?.viewTheme?.color ?? Theme.of(context).scaffoldBackgroundColor,
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: ExtendedTextField(
             controller: widget.richhtmlController.controller,
@@ -287,17 +295,13 @@ class _RichHtmlState extends State<RichHtml> {
               widget.onChanged(value);
             },
             onSubmitted: (String value) {
-              print('onSubmitted $value');
-              widget.onSubmitted(value);
+              widget.onSubmitted?.call(value);
             },
             onTap: () {
-              if (widget.onTap != null) {
-                widget.onTap();
-              }
+              widget.onTap?.call();
             },
             onEditingComplete: () {
-              print('onEditingComplete');
-              widget.onEditingComplete();
+              widget.onEditingComplete?.call();
             },
           ),
         ),

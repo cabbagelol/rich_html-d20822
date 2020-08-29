@@ -36,7 +36,10 @@ class _RichHtmlToolbarState extends State<RichHtmlToolbar> {
     widget.children.forEach((RichHtmlTool e) {
       e.controller = widget.controller;
     });
-    return Row(children: widget.children);
+    return Container(
+      color: widget.controller.theme?.toolbarTheme?.color ?? Colors.white,
+      child: Row(children: widget.children),
+    );
   }
 }
 
@@ -96,6 +99,18 @@ class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
   })  : onTap = onTap ?? null,
         flex = flex ?? 0;
 
+  _on () async {
+    if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
+      String text = await this.controller.insertText();
+      controller
+        ..html = controller.html.substring(0, controller.textSelection.baseOffset) +
+            text +
+            controller.html.substring(controller.textSelection.baseOffset, controller.html.length);
+
+      controller.updateWidget(controller.html);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return RichHtmlTool(
@@ -103,26 +118,16 @@ class RichHtmlToolText extends StatelessWidget implements RichHtmlTool {
         icon: this.child ??
             Icon(
               Icons.text_fields,
-              color: color ?? controller.theme?.mainColor ?? Theme.of(context).splashColor,
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
             ),
-        tooltip: tooltip ?? '文字',
+        tooltip: tooltip ?? null,
         onPressed: () async {
           onTap?.call(type);
-
           if (disable) {
             return null;
           }
 
-          if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
-            String text = await this.controller.insertText();
-            controller
-              ..html = controller.html.substring(0, controller.textSelection.baseOffset) +
-                  text +
-                  controller.html.substring(controller.textSelection.baseOffset, controller.html.length);
-
-            controller.updateWidget(controller.html);
-          }
-          return () {};
+          return this._on();
         },
       ),
       flex: flex,
@@ -156,6 +161,26 @@ class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
     this.disable = false,
   }) : onTap = onTap ?? null;
 
+  _on () async {
+    if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
+      String path = await this.controller.insertImage();
+      if (path != null) {
+        controller
+          ..html = controller.html.substring(
+            0,
+            controller.textSelection.baseOffset,
+          ) +
+              '<img src="$path" />' +
+              controller.html.substring(
+                controller.textSelection.baseOffset,
+                controller.html.length,
+              );
+
+        controller.updateWidget(controller.html);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return RichHtmlTool(
@@ -163,32 +188,16 @@ class RichHtmlToolImages extends StatelessWidget implements RichHtmlTool {
           IconButton(
             icon: Icon(
               Icons.image,
-              color: color ?? controller.theme?.mainColor ?? Theme.of(context).splashColor,
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
             ),
             tooltip: tooltip ?? "插入图片",
             onPressed: () async {
+              onTap?.call(type);
               if (disable) {
                 return null;
-              } else {
-                if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
-                  String path = await this.controller.insertImage();
-                  if (path != null) {
-                    controller
-                      ..html = controller.html.substring(
-                            0,
-                            controller.textSelection.baseOffset,
-                          ) +
-                          '<img src="$path" />' +
-                          controller.html.substring(
-                            controller.textSelection.baseOffset,
-                            controller.html.length,
-                          );
-
-                    controller.updateWidget(controller.html);
-                  }
-                }
-                return () {};
               }
+
+              return this._on();
             },
           ),
       flex: flex,
@@ -219,41 +228,48 @@ class RichHtmlToolVideo extends StatelessWidget implements RichHtmlTool {
     this.tooltip,
     Function onTap,
     this.flex,
-    this.disable,
+    this.disable = false,
   }) : onTap = onTap ?? null;
+
+  _on () async {
+    if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
+      String path = await this.controller.insertVideo();
+      if (path != null) {
+        controller
+          ..html = controller.html.substring(
+            0,
+            controller.textSelection.baseOffset,
+          ) +
+              '<video src="$path" />' +
+              controller.html.substring(
+                controller.textSelection.baseOffset,
+                controller.html.length,
+              );
+
+        controller.updateWidget(controller.html);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return RichHtmlTool(
-      child: GestureDetector(
-        onTap: () async {
-          if (controller.textSelection != null && controller.textSelection.baseOffset == controller.textSelection.extentOffset) {
-            String path = await this.controller.insertVideo();
-            if (path != null) {
-              controller
-                ..html = controller.html.substring(
-                      0,
-                      controller.textSelection.baseOffset,
-                    ) +
-                    '<video src="$path" />' +
-                    controller.html.substring(
-                      controller.textSelection.baseOffset,
-                      controller.html.length,
-                    );
+      child: this.child ??
+          IconButton(
+            icon: Icon(
+              Icons.videocam,
+              color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
+            ),
+            tooltip: tooltip ?? null,
+            onPressed: () {
+              onTap?.call(type);
+              if (disable) {
+                return null;
+              }
 
-              controller.updateWidget(controller.html);
-            }
-          }
-        },
-        child: this.child ??
-            IconButton(
-              icon: Icon(
-                Icons.videocam,
-                color: color ?? controller.theme?.mainColor ?? Theme.of(context).primaryColor,
-              ),
-              tooltip: tooltip ?? null,
-            ), //
-      ),
+              return this._on();
+            },
+          ),
       flex: flex,
       disable: disable,
     );
