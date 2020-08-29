@@ -33,7 +33,7 @@ class RichHtmlDataImage {
 abstract class RichHtmlController {
   RichHtmlController({this.theme});
 
-  String _html;
+  String _html = '';
   RichHtmlUtil _util = RichHtmlUtil();
   RichHtmlTheme theme;
 
