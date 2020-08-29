@@ -1,7 +1,9 @@
 .DS_Store
 .dart_tool/
+.metadata
 .packages
 .pub/
+.idea/
 build/
 
 flutter_rich_html.iml
